@@ -1,0 +1,109 @@
+---
+title: "Split Data"
+author: "Yinpei Wang"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load libraries, warning=FALSE, message=FALSE}
+packages.used=c("tidyverse", "tidytext", "DT")
+
+# check packages that need to be installed.
+packages.needed=setdiff(packages.used, 
+                        intersect(installed.packages()[,1], 
+                                  packages.used))
+# install additional packages
+if(length(packages.needed)>0){
+  install.packages(packages.needed, dependencies = TRUE)
+}
+
+# load packages
+library(tidyverse)
+library(tidytext)
+library(DT)
+```
+
+
+### Load the processed text data along with demographic information on contributors
+
+We use the processed data for our analysis and combine it with the demographic information available.
+
+```{r load data, warning=FALSE, message=FALSE}
+hm_data <- read_csv("../output/processed_moments.csv")
+
+urlfile<-'../data/demographic.csv'
+demo_data <- read_csv(urlfile)
+```
+
+
+### Combine both the data sets and keep the required columns for analysis
+
+We select a subset of the data that satisfies specific row conditions.
+
+```{r combining data, warning=FALSE, message=FALSE}
+hm_data <- hm_data %>%
+  inner_join(demo_data, by = "wid") %>%
+  select(wid,
+         original_hm,
+         gender, 
+         marital, 
+         parenthood,
+         reflection_period,
+         age, 
+         country, 
+         ground_truth_category, 
+         text) %>%
+  mutate(count = sapply(hm_data$text, wordcount)) %>%
+  filter(gender %in% c("m", "f")) %>%
+  filter(marital %in% c("single", "married")) %>%
+  filter(parenthood %in% c("n", "y")) %>%
+  filter(reflection_period %in% c("24h", "3m")) %>%
+  mutate(reflection_period = fct_recode(reflection_period, 
+                                        months_3 = "3m", hours_24 = "24h"))
+```
+
+
+### Split data for different categories and write out the data sets
+
+```{r}
+# split according to question type
+hm_data_24h <- hm_data %>% filter(reflection_period == "hours_24")
+hm_data_3m <- hm_data %>% filter(reflection_period == "months_3")
+
+# split according to gender
+hm_data_female <- hm_data %>% filter(gender == "f")
+hm_data_male <- hm_data %>% filter(gender == 'm')
+
+# split according to marital status
+hm_data_married <- hm_data %>% filter(marital == "married")
+hm_data_unmarried <- hm_data %>% filter(marital == "single")
+
+# split according to parenthood
+hm_data_parent <- hm_data %>% filter(parenthood == "y")
+hm_data_notparent <- hm_data %>% filter(parenthood == "n")
+
+```
+
+
+```{r}
+# write out the split data set
+write_csv(hm_data, "../output/processed_data.csv")
+write_csv(hm_data_24h, "../output/processed_24h.csv")
+write_csv(hm_data_3m, "../output/processed_3m.csv")
+write_csv(hm_data_female, "../output/processed_female.csv")
+write_csv(hm_data_male, "../output/processed_male.csv")
+write_csv(hm_data_married, "../output/processed_married.csv")
+write_csv(hm_data_unmarried, "../output/processed_unmarried.csv")
+write_csv(hm_data_parent, "../output/processed_parent.csv")
+write_csv(hm_data_notparent, "../output/processed_notparent.csv")
+```
+
+
+
+
+
